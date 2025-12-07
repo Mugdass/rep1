@@ -2,9 +2,11 @@ name: Selenium CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
   pull_request:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   selenium-tests:
@@ -14,39 +16,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v3
         with:
-          java-version: 17
           distribution: temurin
+          java-version: 17
 
-      - name: Install Chrome
+      - name: Set up Chrome
         uses: browser-actions/setup-chrome@v2
 
       - name: Install ChromeDriver
-        run: sudo apt-get install -y chromium-chromedriver
-
-      - name: Install ffmpeg
-        run: sudo apt-get install -y ffmpeg xvfb
+        run: sudo apt-get install -y chromium-chromedriver ffmpeg xvfb
 
       - name: Start virtual display
         run: |
-          Xvfb :99 -screen 0 1920x1080x24 &
+          Xvfb :99 -screen 0 1920x1080x24 & 
           echo "DISPLAY=:99" >> $GITHUB_ENV
 
-      - name: Start video recording
+      - name: Record Selenium test video
         run: |
-          mkdir -p videos
-          ffmpeg -y -video_size 1920x1080 -framerate 15 -f x11grab -i :99 videos/test_run.mp4 &
-      
-      - name: Run Selenium tests
-        run: mvn -DCI=true clean test
+          ffmpeg -y -video_size 1920x1080 -framerate 15 -f x11grab -i :99 -codec:v libx264 videos/test_run.mp4 &
+          export FFREPORT=file=ffmpeg.log:level=32
 
-      - name: Stop ffmpeg recording
+      - name: Run Selenium tests
+        run: mvn clean test
+
+      - name: Stop video recording
         run: pkill ffmpeg || true
 
-      - name: Upload video artifact
-        uses: actions/upload-artifact@v3
+      - name: Upload test video
+        uses: actions/upload-artifact@v4
         with:
           name: selenium-test-video
           path: videos/test_run.mp4
+
